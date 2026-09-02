@@ -134,16 +134,12 @@
             font-size: 0.75rem;
             padding: 2px 8px;
             border-radius: 12px;
-            background-color: var(--border-color);
-            color: var(--text-muted);
-        }
-
-        .day-card.active .day-badge {
             background-color: rgba(16, 185, 129, 0.2);
             color: var(--accent-green);
+            font-weight: 600;
         }
 
-        /* Grid 4 Video trong 1 Ngày */
+        /* Grid Video trong 1 Ngày (2 cột) */
         .video-list {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -163,16 +159,10 @@
             position: relative;
         }
 
-        .video-item:hover:not(.locked) {
+        .video-item.unlocked:hover {
             border-color: var(--primary);
             transform: translateY(-2px);
             background-color: rgba(79, 70, 229, 0.1);
-        }
-
-        .video-item.locked {
-            opacity: 0.5;
-            cursor: not-allowed;
-            border-style: dashed;
         }
 
         .video-title {
@@ -185,10 +175,6 @@
 
         .video-status {
             font-size: 0.75rem;
-            color: var(--text-muted);
-        }
-
-        .video-item.unlocked .video-status {
             color: var(--accent-green);
         }
 
@@ -297,21 +283,17 @@
 
     <header>
         <h1><i class="fa-solid fa-graduation-cap" style="color: var(--primary);"></i> Lộ Trình Học Video 30 Ngày</h1>
-        <div class="controls-header">
-            <button class="btn btn-outline" id="toggleDevBtn" onclick="toggleDevMode()">
-                <i class="fa-solid fa-key"></i> <span id="devBtnText">Mở khóa tất cả (Dev Test)</span>
-            </button>
-        </div>
     </header>
 
     <div class="days-grid" id="daysGrid"></div>
 
+    <!-- Modal Chi Tiết Bài Học -->
     <div class="modal-overlay" id="detailModal">
         <div class="modal-content">
             <button class="modal-close" onclick="closeDetailModal()"><i class="fa-solid fa-xmark"></i></button>
             <h2 id="modalTitle" style="margin-bottom: 12px;">Ngày 1 - Bài 1</h2>
             <p id="modalDesc" style="color: var(--text-muted); margin-bottom: 24px; line-height: 1.6;">
-                Nội dung bài học thử nghiệm. Đã được xử lý cắt nhỏ qua FFmpeg định dạng HLS (.m3u8).
+                Nội dung bài học HLS (.m3u8).
             </p>
             <div style="display: flex; justify-content: flex-end; gap: 12px;">
                 <button class="btn btn-outline" onclick="closeDetailModal()">Đóng</button>
@@ -320,6 +302,7 @@
         </div>
     </div>
 
+    <!-- Modal Trình Phát Video HLS -->
     <div class="modal-overlay" id="videoModal">
         <div class="modal-video-content">
             <button class="modal-close" onclick="closeVideoPlayer()"><i class="fa-solid fa-xmark"></i></button>
@@ -331,7 +314,7 @@
             <div class="video-info-bar">
                 <div>
                     <h3 id="playerVideoTitle" style="font-size: 1.1rem; margin-bottom: 4px;">Đang phát: Ngày 1 - Bài 1</h3>
-                    <span class="status-badge"><i class="fa-solid fa-bolt"></i> FFmpeg HLS Stream (.m3u8)</span>
+                    <span class="status-badge"><i class="fa-solid fa-bolt"></i> Stream HLS (.m3u8)</span>
                 </div>
                 <button class="btn" onclick="toggleFullScreen()"><i class="fa-solid fa-expand"></i> Phóng to</button>
             </div>
@@ -339,37 +322,37 @@
     </div>
 
     <script>
-        // Cấu hình tổng số ngày và bài
         const TOTAL_DAYS = 30;
-        const VIDEOS_PER_DAY = 4;
-        let isDevMode = false;
         let currentSelectedLesson = { day: 1, lesson: 1 };
         let hlsInstance = null;
 
-        // Render danh sách 30 ngày
+        // Hàm trả về số lượng bài học tương ứng cho từng Ngày
+        function getLessonsCountForDay(day) {
+            if (day === 1 || day === 2) return 2; // Ngày 1 và 2: 2 bài
+            if (day === 3 || day === 4) return 3; // Ngày 3 và 4: 3 bài
+            return 4;                            // Từ Ngày 5 trở đi: 4 bài
+        }
+
+        // Render toàn bộ 30 Ngày với số bài học linh hoạt và mở khóa 100%
         function renderDashboard() {
             const grid = document.getElementById('daysGrid');
             grid.innerHTML = '';
 
             for (let d = 1; d <= TOTAL_DAYS; d++) {
                 const dayCard = document.createElement('div');
-                const isDay1 = d === 1;
-                dayCard.className = `day-card ${isDay1 || isDevMode ? 'active' : ''}`;
+                dayCard.className = 'day-card active';
 
+                const totalLessons = getLessonsCountForDay(d);
                 let lessonsHTML = '';
-                for (let v = 1; v <= VIDEOS_PER_DAY; v++) {
-                    // Mặc định chỉ mở khóa Bài 1 - Ngày 1
-                    const isUnlocked = isDevMode || (d === 1 && v === 1);
-                    const lockIcon = isUnlocked ? '<i class="fa-solid fa-circle-play" style="color: var(--primary);"></i>' : '<i class="fa-solid fa-lock"></i>';
-                    const statusText = isUnlocked ? 'Sẵn sàng' : 'Đã khóa';
 
+                for (let v = 1; v <= totalLessons; v++) {
                     lessonsHTML += `
-                        <div class="video-item ${isUnlocked ? 'unlocked' : 'locked'}" onclick="openLessonModal(${d}, ${v}, ${isUnlocked})">
+                        <div class="video-item unlocked" onclick="openLessonModal(${d}, ${v})">
                             <div class="video-title">
                                 <span>Bài ${v}</span>
-                                ${lockIcon}
+                                <i class="fa-solid fa-circle-play" style="color: var(--primary);"></i>
                             </div>
-                            <div class="video-status">${statusText}</div>
+                            <div class="video-status">Sẵn sàng</div>
                         </div>
                     `;
                 }
@@ -377,7 +360,7 @@
                 dayCard.innerHTML = `
                     <div class="day-header">
                         <span class="day-title">Ngày ${d}</span>
-                        <span class="day-badge">${isDay1 || isDevMode ? 'Đã mở' : 'Khóa'}</span>
+                        <span class="day-badge">${totalLessons} bài</span>
                     </div>
                     <div class="video-list">
                         ${lessonsHTML}
@@ -387,22 +370,11 @@
             }
         }
 
-        // Bật/tắt Dev mode test tất cả các bài
-        function toggleDevMode() {
-            isDevMode = !isDevMode;
-            document.getElementById('devBtnText').innerText = isDevMode ? 'Khóa lại (Chế độ thường)' : 'Mở khóa tất cả (Dev Test)';
-            renderDashboard();
-        }
-
-        // Mở dialog bài học
-        function openLessonModal(day, lesson, isUnlocked) {
-            if (!isUnlocked) {
-                alert(`Bài ${lesson} - Ngày ${day} hiện đang khóa. Hãy hoàn thành các bài học trước!`);
-                return;
-            }
+        // Mở Modal xem thông tin bài học
+        function openLessonModal(day, lesson) {
             currentSelectedLesson = { day, lesson };
             document.getElementById('modalTitle').innerText = `Ngày ${day} - Bài ${lesson}`;
-            document.getElementById('modalDesc').innerText = `Nguồn phát: video/Day_${day}/lesson${lesson}/playlist.m3u8 (Cắt bằng FFmpeg)`;
+            document.getElementById('modalDesc').innerText = `Nguồn phát: video/Day_${day}/lesson${lesson}/playlist.m3u8`;
             document.getElementById('detailModal').classList.add('active');
         }
 
@@ -410,7 +382,7 @@
             document.getElementById('detailModal').classList.remove('active');
         }
 
-        // Bấm nút "Học ngay" -> Khởi chạy HLS Player
+        // Bắt đầu phát video
         function startLearning() {
             closeDetailModal();
             const { day, lesson } = currentSelectedLesson;
@@ -418,20 +390,19 @@
             document.getElementById('playerVideoTitle').innerText = `Đang phát: Ngày ${day} - Bài ${lesson}`;
             document.getElementById('videoModal').classList.add('active');
 
-            // Cấu hình đường dẫn thư mục con: video/Day_X/lessonY/playlist.m3u8
+            // Đường dẫn đến file playlist.m3u8 theo cấu trúc thư mục
             const m3u8Path = `video/Day_${day}/lesson${lesson}/playlist.m3u8`;
             
-            // Video sample fallback nếu máy local chưa sẵn file m3u8 thực tế để test
+            // Video fallback online để kiểm tra nếu chưa có file local
             const sampleFallbackMp4 = 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8';
 
             setupHLSPlayer(m3u8Path, sampleFallbackMp4);
         }
 
-        // Xử lý nạp HLS Video an toàn
+        // Xử lý nạp HLS Video
         function setupHLSPlayer(src, fallbackSrc) {
             const video = document.getElementById('mainVideo');
 
-            // Hủy instance HLS cũ nếu có
             if (hlsInstance) {
                 hlsInstance.destroy();
                 hlsInstance = null;
@@ -450,15 +421,13 @@
                     safePlay(video);
                 });
 
-                // Nếu không tìm thấy file local m3u8, tự chuyển sang đường dẫn test demo HLS online
                 hlsInstance.on(Hls.Events.ERROR, function (event, data) {
                     if (data.fatal && data.response && data.response.code === 404) {
-                        console.warn("Không tìm thấy file HLS local, chuyển sang video test demo!");
+                        console.warn("Chưa có file m3u8 local, chuyển qua stream demo để phát thử!");
                         hlsInstance.loadSource(fallbackSrc);
                     }
                 });
             } 
-            // Dành riêng cho trình duyệt Safari iOS/macOS (Hỗ trợ HLS gốc)
             else if (video.canPlayType('application/vnd.apple.mpegurl')) {
                 video.src = src;
                 video.addEventListener('loadedmetadata', function () {
@@ -469,7 +438,6 @@
             }
         }
 
-        // Tránh lỗi AbortError Unhandled Rejection khi Play/Pause video
         function safePlay(videoElement) {
             const playPromise = videoElement.play();
             if (playPromise !== undefined) {
@@ -483,7 +451,6 @@
             videoElement.pause();
         }
 
-        // Đóng trình phát video
         function closeVideoPlayer() {
             const video = document.getElementById('mainVideo');
             safePause(video);
@@ -494,7 +461,6 @@
             document.getElementById('videoModal').classList.remove('active');
         }
 
-        // Toàn màn hình
         function toggleFullScreen() {
             const video = document.getElementById('mainVideo');
             if (video.requestFullscreen) {
@@ -506,7 +472,7 @@
             }
         }
 
-        // Khởi tạo trang web
+        // Khởi tạo
         renderDashboard();
     </script>
 </body>
