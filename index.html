@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Hệ Thống Học Video 30 Ngày (YouTube Player)</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
@@ -24,6 +24,7 @@
             margin: 0;
             padding: 0;
             font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            -webkit-tap-highlight-color: transparent;
         }
 
         body {
@@ -31,11 +32,16 @@
             color: var(--text-light);
             min-height: 100vh;
             padding: 24px;
+            /* Hỗ trợ notch/safe-area trên iPhone */
+            padding-top: max(24px, env(safe-area-inset-top));
+            padding-bottom: max(24px, env(safe-area-inset-bottom));
+            padding-left: max(16px, env(safe-area-inset-left));
+            padding-right: max(16px, env(safe-area-inset-right));
         }
 
         header {
             max-width: 1400px;
-            margin: 0 auto 32px auto;
+            margin: 0 auto 28px auto;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -44,7 +50,7 @@
         }
 
         h1 {
-            font-size: 1.8rem;
+            font-size: clamp(1.3rem, 4vw, 1.8rem);
             color: var(--text-light);
             display: flex;
             align-items: center;
@@ -63,6 +69,8 @@
             align-items: center;
             gap: 8px;
             transition: all 0.2s ease;
+            font-size: 0.95rem;
+            touch-action: manipulation;
         }
 
         .btn:hover {
@@ -80,6 +88,7 @@
             color: var(--text-light);
         }
 
+        /* Responsive Grid 30 Ngày */
         .days-grid {
             max-width: 1400px;
             margin: 0 auto;
@@ -91,11 +100,12 @@
         @media (max-width: 1200px) {
             .days-grid { grid-template-columns: repeat(3, 1fr); }
         }
-        @media (max-width: 900px) {
-            .days-grid { grid-template-columns: repeat(2, 1fr); }
+        @media (max-width: 850px) {
+            .days-grid { grid-template-columns: repeat(2, 1fr); gap: 14px; }
+            body { padding: 16px; }
         }
-        @media (max-width: 600px) {
-            .days-grid { grid-template-columns: 1fr; }
+        @media (max-width: 550px) {
+            .days-grid { grid-template-columns: 1fr; gap: 12px; }
         }
 
         .day-card {
@@ -118,7 +128,7 @@
 
         .day-title {
             font-weight: 700;
-            font-size: 1.1rem;
+            font-size: 1.05rem;
             color: var(--text-light);
         }
 
@@ -137,6 +147,10 @@
             gap: 8px;
         }
 
+        @media (max-width: 360px) {
+            .video-list { grid-template-columns: 1fr; }
+        }
+
         .video-item {
             background-color: rgba(15, 23, 42, 0.6);
             border: 1px solid var(--border-color);
@@ -150,10 +164,10 @@
             position: relative;
         }
 
-        .video-item.unlocked:hover {
+        .video-item.unlocked:hover, .video-item.unlocked:active {
             border-color: var(--primary);
             transform: translateY(-2px);
-            background-color: rgba(79, 70, 229, 0.1);
+            background-color: rgba(79, 70, 229, 0.15);
         }
 
         .video-title {
@@ -169,21 +183,23 @@
             color: var(--accent-green);
         }
 
+        /* Modal Base Styles */
         .modal-overlay {
             position: fixed;
             top: 0;
             left: 0;
             width: 100vw;
             height: 100vh;
-            background: rgba(0, 0, 0, 0.85);
-            backdrop-filter: blur(4px);
+            background: rgba(0, 0, 0, 0.88);
+            backdrop-filter: blur(6px);
             display: flex;
             justify-content: center;
             align-items: center;
-            z-index: 1000;
+            z-index: 9999;
             opacity: 0;
             pointer-events: none;
-            transition: opacity 0.3s ease;
+            transition: opacity 0.25s ease;
+            padding: 16px;
         }
 
         .modal-overlay.active {
@@ -194,49 +210,81 @@
         .modal-content {
             background-color: var(--card-bg);
             border-radius: 16px;
-            width: 90%;
-            max-width: 650px;
+            width: 100%;
+            max-width: 550px;
             padding: 24px;
             border: 1px solid var(--border-color);
             position: relative;
+            max-height: 90vh;
+            overflow-y: auto;
         }
 
+        /* Modal Video Container */
         .modal-video-content {
-            background-color: #000;
+            background-color: var(--card-bg);
             border-radius: 16px;
-            width: 90%;
-            max-width: 1000px;
+            width: 100%;
+            max-width: 960px;
             overflow: hidden;
             position: relative;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            max-height: 95vh;
         }
 
-        .modal-close {
-            position: absolute;
-            top: 16px;
-            right: 16px;
+        /* Thanh tiêu đề Modal chứa Nút Đóng tách biệt */
+        .modal-header-bar {
+            padding: 12px 18px;
+            background-color: #1a2332;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            z-index: 10;
+        }
+
+        .modal-header-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--text-light);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Nút đóng hoàn toàn tách biệt, kích thước rõ ràng cho cảm ứng */
+        .modal-close-btn {
             background: rgba(255, 255, 255, 0.1);
-            border: none;
+            border: 1px solid rgba(255, 255, 255, 0.2);
             color: white;
-            width: 36px;
-            height: 36px;
+            width: 38px;
+            height: 38px;
             border-radius: 50%;
             cursor: pointer;
-            z-index: 10;
-            display: flex;
+            display: inline-flex;
             align-items: center;
             justify-content: center;
+            flex-shrink: 0;
+            transition: all 0.2s ease;
+            font-size: 1.1rem;
         }
 
-        .modal-close:hover {
-            background: rgba(255, 255, 255, 0.2);
+        .modal-close-btn:hover, .modal-close-btn:active {
+            background: var(--accent-red);
+            border-color: var(--accent-red);
+            transform: scale(1.05);
         }
 
+        /* Player Wrapper cho YouTube iFrame */
         .player-wrapper {
             width: 100%;
             aspect-ratio: 16/9;
             background-color: #000;
             position: relative;
+            flex-shrink: 0;
         }
 
         .player-wrapper iframe {
@@ -246,11 +294,13 @@
         }
 
         .video-info-bar {
-            padding: 16px 20px;
+            padding: 14px 18px;
             background-color: var(--card-bg);
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
         }
 
         .status-badge {
@@ -276,9 +326,11 @@
     <!-- Modal Chi Tiết Bài Học -->
     <div class="modal-overlay" id="detailModal">
         <div class="modal-content">
-            <button class="modal-close" onclick="closeDetailModal()"><i class="fa-solid fa-xmark"></i></button>
-            <h2 id="modalTitle" style="margin-bottom: 12px;">Ngày 1 - Bài 1</h2>
-            <p id="modalDesc" style="color: var(--text-muted); margin-bottom: 24px; line-height: 1.6; word-break: break-all;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <h2 id="modalTitle" style="font-size: 1.2rem;">Ngày 1 - Bài 1</h2>
+                <button class="modal-close-btn" onclick="closeDetailModal()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <p id="modalDesc" style="color: var(--text-muted); margin-bottom: 24px; line-height: 1.6; word-break: break-all; font-size: 0.9rem;">
                 Link Video YouTube.
             </p>
             <div style="display: flex; justify-content: flex-end; gap: 12px;">
@@ -291,21 +343,30 @@
     <!-- Modal Trình Phát Video YouTube -->
     <div class="modal-overlay" id="videoModal">
         <div class="modal-video-content">
-            <button class="modal-close" onclick="closeVideoPlayer()"><i class="fa-solid fa-xmark"></i></button>
             
-            <div class="player-wrapper">
+            <!-- Thanh tiêu đề phía trên chứa nút đóng rời hẳn khỏi video -->
+            <div class="modal-header-bar">
+                <span class="modal-header-title" id="playerVideoTitle">Đang phát: Ngày 1 - Bài 1</span>
+                <button class="modal-close-btn" onclick="closeVideoPlayer()" title="Đóng Video (Esc)">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            
+            <!-- Khung phát Video YouTube -->
+            <div class="player-wrapper" id="playerWrapper">
                 <iframe id="youtubePlayer" 
                         src="" 
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen" 
                         allowfullscreen>
                 </iframe>
             </div>
 
+            <!-- Thanh công cụ phía dưới video -->
             <div class="video-info-bar">
-                <div>
-                    <h3 id="playerVideoTitle" style="font-size: 1.1rem; margin-bottom: 4px;">Đang phát: Ngày 1 - Bài 1</h3>
-                    <span class="status-badge"><i class="fa-brands fa-youtube"></i> YouTube Player</span>
-                </div>
+                <span class="status-badge"><i class="fa-brands fa-youtube"></i> YouTube Player</span>
+                <button class="btn btn-outline" onclick="toggleFullScreen()" style="padding: 6px 12px; font-size: 0.85rem;">
+                    <i class="fa-solid fa-expand"></i> Phóng to màn hình
+                </button>
             </div>
         </div>
     </div>
@@ -320,30 +381,30 @@
         const youtubeLinks = {
             // Ngày 1 (2 bài)
             "1_1": "https://youtu.be/fA_Dna3ZNlg",
-            "1_2": "https://youtu.be/Jp9_76w_vJ4",
+            "1_2": "https://youtu.be/fA_Dna3ZNlg",
 
             // Ngày 2 (2 bài)
-            "2_1": "",
-            "2_2": "",
+            "2_1": "https://youtu.be/36rXhp3I2pU",
+            "2_2": "https://youtu.be/9VFYi8qTARY",
 
             // Ngày 3 (3 bài)
-            "3_1": "",
-            "3_2": "",
-            "3_3": "",
+            "3_1": "https://youtu.be/RayCGyjKqDQ",
+            "3_2": "https://youtu.be/CSht9KOu1hY",
+            "3_3": "https://youtu.be/fW8MpqdRDTw",
 
             // Ngày 4 (3 bài)
-            "4_1": "",
-            "4_2": "",
-            "4_3": "",
+            "4_1": "https://youtu.be/Mmfjl3t85tA",
+            "4_2": "https://youtu.be/s2K67xSEGWw",
+            "4_3": "https://youtu.be/D1WAJDUkdJQ",
 
             // Ngày 5 (4 bài)
-            "5_1": "",
-            "5_2": "",
-            "5_3": "",
-            "5_4": "",
+            "5_1": "https://youtu.be/-gnFLlqdYEo",
+            "5_2": "https://youtu.be/ORbalYqhphU",
+            "5_3": "https://youtu.be/cAgh3K9vECI",
+            "5_4": "https://youtu.be/UnuQEUhI2Ho",
 
             // Ngày 6 (4 bài)
-            "6_1": "",
+            "6_1": "https://youtu.be/lnOvLpx45ws",
             "6_2": "",
             "6_3": "",
             "6_4": "",
@@ -493,10 +554,9 @@
             "30_4": ""
         };
 
-        // Link phát thử mặc định nếu bài học đó bạn chưa dán link vào
         const DEFAULT_DEMO_YOUTUBE = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
 
-        // Trích xuất YouTube Video ID từ nhiều chuẩn link khác nhau
+        // Trích xuất ID YouTube tương thích mọi chuẩn link
         function extractYouTubeId(url) {
             if (!url) return null;
             const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=|shorts\/)([^#\&\?]*).*/;
@@ -504,14 +564,12 @@
             return (match && match[2].length === 11) ? match[2] : null;
         }
 
-        // Tính số lượng bài học theo ngày
         function getLessonsCountForDay(day) {
             if (day === 1 || day === 2) return 2;
             if (day === 3 || day === 4) return 3;
             return 4;
         }
 
-        // Render giao diện 30 ngày
         function renderDashboard() {
             const grid = document.getElementById('daysGrid');
             grid.innerHTML = '';
@@ -548,7 +606,6 @@
             }
         }
 
-        // Mở popup thông tin
         function openLessonModal(day, lesson) {
             currentSelectedLesson = { day, lesson };
             const key = `${day}_${lesson}`;
@@ -565,12 +622,11 @@
             document.getElementById('detailModal').classList.remove('active');
         }
 
-        // Phát video
         function startLearning() {
             closeDetailModal();
             const { day, lesson } = currentSelectedLesson;
             
-            document.getElementById('playerVideoTitle').innerText = `Đang phát: Ngày ${day} - Bài ${lesson}`;
+            document.getElementById('playerVideoTitle').innerText = `Ngày ${day} - Bài ${lesson}`;
             
             const key = `${day}_${lesson}`;
             const targetUrl = youtubeLinks[key] && youtubeLinks[key].trim() !== "" 
@@ -580,7 +636,7 @@
 
             const iframe = document.getElementById('youtubePlayer');
             if (videoId) {
-                iframe.src = `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0`;
+                iframe.src = `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&fs=1`;
             } else {
                 alert("Link YouTube cho bài này không hợp lệ!");
                 return;
@@ -589,11 +645,49 @@
             document.getElementById('videoModal').classList.add('active');
         }
 
-        // Đóng trình phát video
         function closeVideoPlayer() {
+            if (document.fullscreenElement) {
+                document.exitFullscreen();
+            }
             const iframe = document.getElementById('youtubePlayer');
             iframe.src = '';
             document.getElementById('videoModal').classList.remove('active');
+        }
+
+        // Bấm nền đen bên ngoài để đóng modal
+        document.querySelectorAll('.modal-overlay').forEach(overlay => {
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) {
+                    closeDetailModal();
+                    closeVideoPlayer();
+                }
+            });
+        });
+
+        // Bấm nút Esc trên bàn phím để đóng modal
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeDetailModal();
+                closeVideoPlayer();
+            }
+        });
+
+        // Phóng to màn hình chuẩn đa trình duyệt
+        function toggleFullScreen() {
+            const playerElem = document.getElementById('playerWrapper');
+            if (!document.fullscreenElement) {
+                if (playerElem.requestFullscreen) {
+                    playerElem.requestFullscreen();
+                } else if (playerElem.webkitRequestFullscreen) {
+                    playerElem.webkitRequestFullscreen();
+                } else if (playerElem.msRequestFullscreen) {
+                    playerElem.msRequestFullscreen();
+                }
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                }
+            }
         }
 
         renderDashboard();
