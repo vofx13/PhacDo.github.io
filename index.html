@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hệ Thống Học Video 30 Ngày (HLS Player)</title>
-    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <title>Hệ Thống Học Video 30 Ngày (YouTube Player)</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
@@ -17,7 +16,7 @@
             --text-muted: #94a3b8;
             --border-color: #334155;
             --accent-green: #10b981;
-            --accent-lock: #64748b;
+            --accent-red: #ef4444;
         }
 
         * {
@@ -52,11 +51,6 @@
             gap: 12px;
         }
 
-        .controls-header {
-            display: flex;
-            gap: 12px;
-        }
-
         .btn {
             background-color: var(--primary);
             color: white;
@@ -86,7 +80,6 @@
             color: var(--text-light);
         }
 
-        /* Responsive Grid: 4 Cột Ngày trên Desktop */
         .days-grid {
             max-width: 1400px;
             margin: 0 auto;
@@ -105,7 +98,6 @@
             .days-grid { grid-template-columns: 1fr; }
         }
 
-        /* Day Container Card */
         .day-card {
             background-color: var(--card-bg);
             border-radius: 12px;
@@ -139,7 +131,6 @@
             font-weight: 600;
         }
 
-        /* Grid Video trong 1 Ngày (2 cột) */
         .video-list {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -178,7 +169,6 @@
             color: var(--accent-green);
         }
 
-        /* Modals */
         .modal-overlay {
             position: fixed;
             top: 0;
@@ -242,21 +232,17 @@
             background: rgba(255, 255, 255, 0.2);
         }
 
-        /* Player Wrapper */
         .player-wrapper {
             width: 100%;
             aspect-ratio: 16/9;
             background-color: #000;
             position: relative;
-            display: flex;
-            align-items: center;
-            justify-content: center;
         }
 
-        video {
+        .player-wrapper iframe {
             width: 100%;
             height: 100%;
-            object-fit: contain;
+            border: none;
         }
 
         .video-info-bar {
@@ -274,8 +260,8 @@
             font-size: 0.8rem;
             padding: 4px 10px;
             border-radius: 20px;
-            background: rgba(16, 185, 129, 0.15);
-            color: var(--accent-green);
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--accent-red);
         }
     </style>
 </head>
@@ -292,8 +278,8 @@
         <div class="modal-content">
             <button class="modal-close" onclick="closeDetailModal()"><i class="fa-solid fa-xmark"></i></button>
             <h2 id="modalTitle" style="margin-bottom: 12px;">Ngày 1 - Bài 1</h2>
-            <p id="modalDesc" style="color: var(--text-muted); margin-bottom: 24px; line-height: 1.6;">
-                Nội dung bài học HLS (.m3u8).
+            <p id="modalDesc" style="color: var(--text-muted); margin-bottom: 24px; line-height: 1.6; word-break: break-all;">
+                Link Video YouTube.
             </p>
             <div style="display: flex; justify-content: flex-end; gap: 12px;">
                 <button class="btn btn-outline" onclick="closeDetailModal()">Đóng</button>
@@ -302,21 +288,24 @@
         </div>
     </div>
 
-    <!-- Modal Trình Phát Video HLS -->
+    <!-- Modal Trình Phát Video YouTube -->
     <div class="modal-overlay" id="videoModal">
         <div class="modal-video-content">
             <button class="modal-close" onclick="closeVideoPlayer()"><i class="fa-solid fa-xmark"></i></button>
             
             <div class="player-wrapper">
-                <video id="mainVideo" controls preload="auto" playsinline></video>
+                <iframe id="youtubePlayer" 
+                        src="" 
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                        allowfullscreen>
+                </iframe>
             </div>
 
             <div class="video-info-bar">
                 <div>
                     <h3 id="playerVideoTitle" style="font-size: 1.1rem; margin-bottom: 4px;">Đang phát: Ngày 1 - Bài 1</h3>
-                    <span class="status-badge"><i class="fa-solid fa-bolt"></i> Stream HLS (.m3u8)</span>
+                    <span class="status-badge"><i class="fa-brands fa-youtube"></i> YouTube Player</span>
                 </div>
-                <button class="btn" onclick="toggleFullScreen()"><i class="fa-solid fa-expand"></i> Phóng to</button>
             </div>
         </div>
     </div>
@@ -324,16 +313,205 @@
     <script>
         const TOTAL_DAYS = 30;
         let currentSelectedLesson = { day: 1, lesson: 1 };
-        let hlsInstance = null;
 
-        // Hàm trả về số lượng bài học tương ứng cho từng Ngày
-        function getLessonsCountForDay(day) {
-            if (day === 1 || day === 2) return 2; // Ngày 1 và 2: 2 bài
-            if (day === 3 || day === 4) return 3; // Ngày 3 và 4: 3 bài
-            return 4;                            // Từ Ngày 5 trở đi: 4 bài
+        // -------------------------------------------------------------------
+        // DÁN LINK YOUTUBE CỦA BẠN VÀO BÊN TRONG DẤU " " CHO TỪNG BÀI
+        // -------------------------------------------------------------------
+        const youtubeLinks = {
+            // Ngày 1 (2 bài)
+            "1_1": "https://youtu.be/fA_Dna3ZNlg",
+            "1_2": "https://youtu.be/Jp9_76w_vJ4",
+
+            // Ngày 2 (2 bài)
+            "2_1": "",
+            "2_2": "",
+
+            // Ngày 3 (3 bài)
+            "3_1": "",
+            "3_2": "",
+            "3_3": "",
+
+            // Ngày 4 (3 bài)
+            "4_1": "",
+            "4_2": "",
+            "4_3": "",
+
+            // Ngày 5 (4 bài)
+            "5_1": "",
+            "5_2": "",
+            "5_3": "",
+            "5_4": "",
+
+            // Ngày 6 (4 bài)
+            "6_1": "",
+            "6_2": "",
+            "6_3": "",
+            "6_4": "",
+
+            // Ngày 7 (4 bài)
+            "7_1": "",
+            "7_2": "",
+            "7_3": "",
+            "7_4": "",
+
+            // Ngày 8 (4 bài)
+            "8_1": "",
+            "8_2": "",
+            "8_3": "",
+            "8_4": "",
+
+            // Ngày 9 (4 bài)
+            "9_1": "",
+            "9_2": "",
+            "9_3": "",
+            "9_4": "",
+
+            // Ngày 10 (4 bài)
+            "10_1": "",
+            "10_2": "",
+            "10_3": "",
+            "10_4": "",
+
+            // Ngày 11 (4 bài)
+            "11_1": "",
+            "11_2": "",
+            "11_3": "",
+            "11_4": "",
+
+            // Ngày 12 (4 bài)
+            "12_1": "",
+            "12_2": "",
+            "12_3": "",
+            "12_4": "",
+
+            // Ngày 13 (4 bài)
+            "13_1": "",
+            "13_2": "",
+            "13_3": "",
+            "13_4": "",
+
+            // Ngày 14 (4 bài)
+            "14_1": "",
+            "14_2": "",
+            "14_3": "",
+            "14_4": "",
+
+            // Ngày 15 (4 bài)
+            "15_1": "",
+            "15_2": "",
+            "15_3": "",
+            "15_4": "",
+
+            // Ngày 16 (4 bài)
+            "16_1": "",
+            "16_2": "",
+            "16_3": "",
+            "16_4": "",
+
+            // Ngày 17 (4 bài)
+            "17_1": "",
+            "17_2": "",
+            "17_3": "",
+            "17_4": "",
+
+            // Ngày 18 (4 bài)
+            "18_1": "",
+            "18_2": "",
+            "18_3": "",
+            "18_4": "",
+
+            // Ngày 19 (4 bài)
+            "19_1": "",
+            "19_2": "",
+            "19_3": "",
+            "19_4": "",
+
+            // Ngày 20 (4 bài)
+            "20_1": "",
+            "20_2": "",
+            "20_3": "",
+            "20_4": "",
+
+            // Ngày 21 (4 bài)
+            "21_1": "",
+            "21_2": "",
+            "21_3": "",
+            "21_4": "",
+
+            // Ngày 22 (4 bài)
+            "22_1": "",
+            "22_2": "",
+            "22_3": "",
+            "22_4": "",
+
+            // Ngày 23 (4 bài)
+            "23_1": "",
+            "23_2": "",
+            "23_3": "",
+            "23_4": "",
+
+            // Ngày 24 (4 bài)
+            "24_1": "",
+            "24_2": "",
+            "24_3": "",
+            "24_4": "",
+
+            // Ngày 25 (4 bài)
+            "25_1": "",
+            "25_2": "",
+            "25_3": "",
+            "25_4": "",
+
+            // Ngày 26 (4 bài)
+            "26_1": "",
+            "26_2": "",
+            "26_3": "",
+            "26_4": "",
+
+            // Ngày 27 (4 bài)
+            "27_1": "",
+            "27_2": "",
+            "27_3": "",
+            "27_4": "",
+
+            // Ngày 28 (4 bài)
+            "28_1": "",
+            "28_2": "",
+            "28_3": "",
+            "28_4": "",
+
+            // Ngày 29 (4 bài)
+            "29_1": "",
+            "29_2": "",
+            "29_3": "",
+            "29_4": "",
+
+            // Ngày 30 (4 bài)
+            "30_1": "",
+            "30_2": "",
+            "30_3": "",
+            "30_4": ""
+        };
+
+        // Link phát thử mặc định nếu bài học đó bạn chưa dán link vào
+        const DEFAULT_DEMO_YOUTUBE = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
+
+        // Trích xuất YouTube Video ID từ nhiều chuẩn link khác nhau
+        function extractYouTubeId(url) {
+            if (!url) return null;
+            const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=|shorts\/)([^#\&\?]*).*/;
+            const match = url.match(regExp);
+            return (match && match[2].length === 11) ? match[2] : null;
         }
 
-        // Render toàn bộ 30 Ngày với số bài học linh hoạt và mở khóa 100%
+        // Tính số lượng bài học theo ngày
+        function getLessonsCountForDay(day) {
+            if (day === 1 || day === 2) return 2;
+            if (day === 3 || day === 4) return 3;
+            return 4;
+        }
+
+        // Render giao diện 30 ngày
         function renderDashboard() {
             const grid = document.getElementById('daysGrid');
             grid.innerHTML = '';
@@ -350,7 +528,7 @@
                         <div class="video-item unlocked" onclick="openLessonModal(${d}, ${v})">
                             <div class="video-title">
                                 <span>Bài ${v}</span>
-                                <i class="fa-solid fa-circle-play" style="color: var(--primary);"></i>
+                                <i class="fa-brands fa-youtube" style="color: var(--accent-red);"></i>
                             </div>
                             <div class="video-status">Sẵn sàng</div>
                         </div>
@@ -370,11 +548,16 @@
             }
         }
 
-        // Mở Modal xem thông tin bài học
+        // Mở popup thông tin
         function openLessonModal(day, lesson) {
             currentSelectedLesson = { day, lesson };
+            const key = `${day}_${lesson}`;
+            const targetUrl = youtubeLinks[key] && youtubeLinks[key].trim() !== "" 
+                              ? youtubeLinks[key] 
+                              : DEFAULT_DEMO_YOUTUBE;
+
             document.getElementById('modalTitle').innerText = `Ngày ${day} - Bài ${lesson}`;
-            document.getElementById('modalDesc').innerText = `Nguồn phát: video/Day_${day}/lesson${lesson}/playlist.m3u8`;
+            document.getElementById('modalDesc').innerText = `Nguồn video: ${targetUrl}`;
             document.getElementById('detailModal').classList.add('active');
         }
 
@@ -382,97 +565,37 @@
             document.getElementById('detailModal').classList.remove('active');
         }
 
-        // Bắt đầu phát video
+        // Phát video
         function startLearning() {
             closeDetailModal();
             const { day, lesson } = currentSelectedLesson;
             
             document.getElementById('playerVideoTitle').innerText = `Đang phát: Ngày ${day} - Bài ${lesson}`;
-            document.getElementById('videoModal').classList.add('active');
-
-            // Đường dẫn đến file playlist.m3u8 theo cấu trúc thư mục
-            const m3u8Path = `video/Day_${day}/lesson${lesson}/playlist.m3u8`;
             
-            // Video fallback online để kiểm tra nếu chưa có file local
-            const sampleFallbackMp4 = 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8';
+            const key = `${day}_${lesson}`;
+            const targetUrl = youtubeLinks[key] && youtubeLinks[key].trim() !== "" 
+                              ? youtubeLinks[key] 
+                              : DEFAULT_DEMO_YOUTUBE;
+            const videoId = extractYouTubeId(targetUrl);
 
-            setupHLSPlayer(m3u8Path, sampleFallbackMp4);
-        }
-
-        // Xử lý nạp HLS Video
-        function setupHLSPlayer(src, fallbackSrc) {
-            const video = document.getElementById('mainVideo');
-
-            if (hlsInstance) {
-                hlsInstance.destroy();
-                hlsInstance = null;
-            }
-
-            if (Hls.isSupported()) {
-                hlsInstance = new Hls({
-                    enableWorker: true,
-                    lowLatencyMode: true
-                });
-
-                hlsInstance.loadSource(src);
-                hlsInstance.attachMedia(video);
-
-                hlsInstance.on(Hls.Events.MANIFEST_PARSED, function () {
-                    safePlay(video);
-                });
-
-                hlsInstance.on(Hls.Events.ERROR, function (event, data) {
-                    if (data.fatal && data.response && data.response.code === 404) {
-                        console.warn("Chưa có file m3u8 local, chuyển qua stream demo để phát thử!");
-                        hlsInstance.loadSource(fallbackSrc);
-                    }
-                });
-            } 
-            else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-                video.src = src;
-                video.addEventListener('loadedmetadata', function () {
-                    safePlay(video);
-                });
+            const iframe = document.getElementById('youtubePlayer');
+            if (videoId) {
+                iframe.src = `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0`;
             } else {
-                alert("Trình duyệt không hỗ trợ HLS Player!");
+                alert("Link YouTube cho bài này không hợp lệ!");
+                return;
             }
+
+            document.getElementById('videoModal').classList.add('active');
         }
 
-        function safePlay(videoElement) {
-            const playPromise = videoElement.play();
-            if (playPromise !== undefined) {
-                playPromise.catch(error => {
-                    console.log("Playback interrupted or delayed:", error);
-                });
-            }
-        }
-
-        function safePause(videoElement) {
-            videoElement.pause();
-        }
-
+        // Đóng trình phát video
         function closeVideoPlayer() {
-            const video = document.getElementById('mainVideo');
-            safePause(video);
-            if (hlsInstance) {
-                hlsInstance.destroy();
-                hlsInstance = null;
-            }
+            const iframe = document.getElementById('youtubePlayer');
+            iframe.src = '';
             document.getElementById('videoModal').classList.remove('active');
         }
 
-        function toggleFullScreen() {
-            const video = document.getElementById('mainVideo');
-            if (video.requestFullscreen) {
-                video.requestFullscreen();
-            } else if (video.webkitRequestFullscreen) {
-                video.webkitRequestFullscreen();
-            } else if (video.msRequestFullscreen) {
-                video.msRequestFullscreen();
-            }
-        }
-
-        // Khởi tạo
         renderDashboard();
     </script>
 </body>
