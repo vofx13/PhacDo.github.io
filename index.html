@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ Thống Học Video 30 Ngày (HLS Player)</title>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --bg-dark: #0f172a;
+            --card-bg: #1e293b;
+            --text-light: #f8fafc;
+            --text-muted: #94a3b8;
+            --border-color: #334155;
+            --accent-green: #10b981;
+            --accent-lock: #64748b;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-light);
+            min-height: 100vh;
+            padding: 24px;
+        }
+
+        header {
+            max-width: 1400px;
+            margin: 0 auto 32px auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            color: var(--text-light);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .controls-header {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .btn:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .btn-outline {
+            background-color: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-muted);
+        }
+
+        .btn-outline:hover {
+            background-color: var(--card-bg);
+            color: var(--text-light);
+        }
+
+        /* Responsive Grid: 4 Cột Ngày trên Desktop */
+        .days-grid {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+        }
+
+        @media (max-width: 1200px) {
+            .days-grid { grid-template-columns: repeat(3, 1fr); }
+        }
+        @media (max-width: 900px) {
+            .days-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 600px) {
+            .days-grid { grid-template-columns: 1fr; }
+        }
+
+        /* Day Container Card */
+        .day-card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 16px;
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .day-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .day-title {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: var(--text-light);
+        }
+
+        .day-badge {
+            font-size: 0.75rem;
+            padding: 2px 8px;
+            border-radius: 12px;
+            background-color: var(--border-color);
+            color: var(--text-muted);
+        }
+
+        .day-card.active .day-badge {
+            background-color: rgba(16, 185, 129, 0.2);
+            color: var(--accent-green);
+        }
+
+        /* Grid 4 Video trong 1 Ngày */
+        .video-list {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .video-item {
+            background-color: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            position: relative;
+        }
+
+        .video-item:hover:not(.locked) {
+            border-color: var(--primary);
+            transform: translateY(-2px);
+            background-color: rgba(79, 70, 229, 0.1);
+        }
+
+        .video-item.locked {
+            opacity: 0.5;
+            cursor: not-allowed;
+            border-style: dashed;
+        }
+
+        .video-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .video-status {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .video-item.unlocked .video-status {
+            color: var(--accent-green);
+        }
+
+        /* Modals */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(4px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-content {
+            background-color: var(--card-bg);
+            border-radius: 16px;
+            width: 90%;
+            max-width: 650px;
+            padding: 24px;
+            border: 1px solid var(--border-color);
+            position: relative;
+        }
+
+        .modal-video-content {
+            background-color: #000;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 1000px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: white;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            cursor: pointer;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-close:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        /* Player Wrapper */
+        .player-wrapper {
+            width: 100%;
+            aspect-ratio: 16/9;
+            background-color: #000;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .video-info-bar {
+            padding: 16px 20px;
+            background-color: var(--card-bg);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.8rem;
+            padding: 4px 10px;
+            border-radius: 20px;
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--accent-green);
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1><i class="fa-solid fa-graduation-cap" style="color: var(--primary);"></i> Lộ Trình Học Video 30 Ngày</h1>
+        <div class="controls-header">
+            <button class="btn btn-outline" id="toggleDevBtn" onclick="toggleDevMode()">
+                <i class="fa-solid fa-key"></i> <span id="devBtnText">Mở khóa tất cả (Dev Test)</span>
+            </button>
+        </div>
+    </header>
+
+    <div class="days-grid" id="daysGrid"></div>
+
+    <div class="modal-overlay" id="detailModal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeDetailModal()"><i class="fa-solid fa-xmark"></i></button>
+            <h2 id="modalTitle" style="margin-bottom: 12px;">Ngày 1 - Bài 1</h2>
+            <p id="modalDesc" style="color: var(--text-muted); margin-bottom: 24px; line-height: 1.6;">
+                Nội dung bài học thử nghiệm. Đã được xử lý cắt nhỏ qua FFmpeg định dạng HLS (.m3u8).
+            </p>
+            <div style="display: flex; justify-content: flex-end; gap: 12px;">
+                <button class="btn btn-outline" onclick="closeDetailModal()">Đóng</button>
+                <button class="btn" onclick="startLearning()"><i class="fa-solid fa-play"></i> Học ngay</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="videoModal">
+        <div class="modal-video-content">
+            <button class="modal-close" onclick="closeVideoPlayer()"><i class="fa-solid fa-xmark"></i></button>
+            
+            <div class="player-wrapper">
+                <video id="mainVideo" controls preload="auto" playsinline></video>
+            </div>
+
+            <div class="video-info-bar">
+                <div>
+                    <h3 id="playerVideoTitle" style="font-size: 1.1rem; margin-bottom: 4px;">Đang phát: Ngày 1 - Bài 1</h3>
+                    <span class="status-badge"><i class="fa-solid fa-bolt"></i> FFmpeg HLS Stream (.m3u8)</span>
+                </div>
+                <button class="btn" onclick="toggleFullScreen()"><i class="fa-solid fa-expand"></i> Phóng to</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Cấu hình tổng số ngày và bài
+        const TOTAL_DAYS = 30;
+        const VIDEOS_PER_DAY = 4;
+        let isDevMode = false;
+        let currentSelectedLesson = { day: 1, lesson: 1 };
+        let hlsInstance = null;
+
+        // Render danh sách 30 ngày
+        function renderDashboard() {
+            const grid = document.getElementById('daysGrid');
+            grid.innerHTML = '';
+
+            for (let d = 1; d <= TOTAL_DAYS; d++) {
+                const dayCard = document.createElement('div');
+                const isDay1 = d === 1;
+                dayCard.className = `day-card ${isDay1 || isDevMode ? 'active' : ''}`;
+
+                let lessonsHTML = '';
+                for (let v = 1; v <= VIDEOS_PER_DAY; v++) {
+                    // Mặc định chỉ mở khóa Bài 1 - Ngày 1
+                    const isUnlocked = isDevMode || (d === 1 && v === 1);
+                    const lockIcon = isUnlocked ? '<i class="fa-solid fa-circle-play" style="color: var(--primary);"></i>' : '<i class="fa-solid fa-lock"></i>';
+                    const statusText = isUnlocked ? 'Sẵn sàng' : 'Đã khóa';
+
+                    lessonsHTML += `
+                        <div class="video-item ${isUnlocked ? 'unlocked' : 'locked'}" onclick="openLessonModal(${d}, ${v}, ${isUnlocked})">
+                            <div class="video-title">
+                                <span>Bài ${v}</span>
+                                ${lockIcon}
+                            </div>
+                            <div class="video-status">${statusText}</div>
+                        </div>
+                    `;
+                }
+
+                dayCard.innerHTML = `
+                    <div class="day-header">
+                        <span class="day-title">Ngày ${d}</span>
+                        <span class="day-badge">${isDay1 || isDevMode ? 'Đã mở' : 'Khóa'}</span>
+                    </div>
+                    <div class="video-list">
+                        ${lessonsHTML}
+                    </div>
+                `;
+                grid.appendChild(dayCard);
+            }
+        }
+
+        // Bật/tắt Dev mode test tất cả các bài
+        function toggleDevMode() {
+            isDevMode = !isDevMode;
+            document.getElementById('devBtnText').innerText = isDevMode ? 'Khóa lại (Chế độ thường)' : 'Mở khóa tất cả (Dev Test)';
+            renderDashboard();
+        }
+
+        // Mở dialog bài học
+        function openLessonModal(day, lesson, isUnlocked) {
+            if (!isUnlocked) {
+                alert(`Bài ${lesson} - Ngày ${day} hiện đang khóa. Hãy hoàn thành các bài học trước!`);
+                return;
+            }
+            currentSelectedLesson = { day, lesson };
+            document.getElementById('modalTitle').innerText = `Ngày ${day} - Bài ${lesson}`;
+            document.getElementById('modalDesc').innerText = `Nguồn phát: video/Day_${day}/lesson${lesson}/playlist.m3u8 (Cắt bằng FFmpeg)`;
+            document.getElementById('detailModal').classList.add('active');
+        }
+
+        function closeDetailModal() {
+            document.getElementById('detailModal').classList.remove('active');
+        }
+
+        // Bấm nút "Học ngay" -> Khởi chạy HLS Player
+        function startLearning() {
+            closeDetailModal();
+            const { day, lesson } = currentSelectedLesson;
+            
+            document.getElementById('playerVideoTitle').innerText = `Đang phát: Ngày ${day} - Bài ${lesson}`;
+            document.getElementById('videoModal').classList.add('active');
+
+            // Cấu hình đường dẫn thư mục con: video/Day_X/lessonY/playlist.m3u8
+            const m3u8Path = `video/Day_${day}/lesson${lesson}/playlist.m3u8`;
+            
+            // Video sample fallback nếu máy local chưa sẵn file m3u8 thực tế để test
+            const sampleFallbackMp4 = 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8';
+
+            setupHLSPlayer(m3u8Path, sampleFallbackMp4);
+        }
+
+        // Xử lý nạp HLS Video an toàn
+        function setupHLSPlayer(src, fallbackSrc) {
+            const video = document.getElementById('mainVideo');
+
+            // Hủy instance HLS cũ nếu có
+            if (hlsInstance) {
+                hlsInstance.destroy();
+                hlsInstance = null;
+            }
+
+            if (Hls.isSupported()) {
+                hlsInstance = new Hls({
+                    enableWorker: true,
+                    lowLatencyMode: true
+                });
+
+                hlsInstance.loadSource(src);
+                hlsInstance.attachMedia(video);
+
+                hlsInstance.on(Hls.Events.MANIFEST_PARSED, function () {
+                    safePlay(video);
+                });
+
+                // Nếu không tìm thấy file local m3u8, tự chuyển sang đường dẫn test demo HLS online
+                hlsInstance.on(Hls.Events.ERROR, function (event, data) {
+                    if (data.fatal && data.response && data.response.code === 404) {
+                        console.warn("Không tìm thấy file HLS local, chuyển sang video test demo!");
+                        hlsInstance.loadSource(fallbackSrc);
+                    }
+                });
+            } 
+            // Dành riêng cho trình duyệt Safari iOS/macOS (Hỗ trợ HLS gốc)
+            else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                video.src = src;
+                video.addEventListener('loadedmetadata', function () {
+                    safePlay(video);
+                });
+            } else {
+                alert("Trình duyệt không hỗ trợ HLS Player!");
+            }
+        }
+
+        // Tránh lỗi AbortError Unhandled Rejection khi Play/Pause video
+        function safePlay(videoElement) {
+            const playPromise = videoElement.play();
+            if (playPromise !== undefined) {
+                playPromise.catch(error => {
+                    console.log("Playback interrupted or delayed:", error);
+                });
+            }
+        }
+
+        function safePause(videoElement) {
+            videoElement.pause();
+        }
+
+        // Đóng trình phát video
+        function closeVideoPlayer() {
+            const video = document.getElementById('mainVideo');
+            safePause(video);
+            if (hlsInstance) {
+                hlsInstance.destroy();
+                hlsInstance = null;
+            }
+            document.getElementById('videoModal').classList.remove('active');
+        }
+
+        // Toàn màn hình
+        function toggleFullScreen() {
+            const video = document.getElementById('mainVideo');
+            if (video.requestFullscreen) {
+                video.requestFullscreen();
+            } else if (video.webkitRequestFullscreen) {
+                video.webkitRequestFullscreen();
+            } else if (video.msRequestFullscreen) {
+                video.msRequestFullscreen();
+            }
+        }
+
+        // Khởi tạo trang web
+        renderDashboard();
+    </script>
+</body>
+</html>
